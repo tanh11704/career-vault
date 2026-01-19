@@ -8,7 +8,15 @@ import com.tpanh.server.modules.auth.entity.User;
 
 public interface AuthService {
 
-    AuthResponse register(RegisterRequest request);
+    void register(RegisterRequest request);
+
+    void verifyEmail(String token);
+
+    void forgotPassword(String email);
+
+    void resetPassword(String token, String newPassword);
+
+    void resendVerification(String email);
 
     AuthResponse login(LoginRequest request);
 

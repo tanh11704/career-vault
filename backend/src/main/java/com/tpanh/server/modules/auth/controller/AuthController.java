@@ -4,16 +4,14 @@ import com.tpanh.server.common.exception.BusinessLogicException;
 import com.tpanh.server.modules.auth.dto.AuthResponse;
 import com.tpanh.server.modules.auth.dto.LoginRequest;
 import com.tpanh.server.modules.auth.dto.RegisterRequest;
+import com.tpanh.server.modules.auth.dto.ResetPasswordRequest;
 import com.tpanh.server.modules.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("${application.api.prefix}/auth")
@@ -23,8 +21,33 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody @Valid RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
+    public ResponseEntity<String> register(@RequestBody @Valid RegisterRequest request) {
+        authService.register(request);
+        return ResponseEntity.ok("Verification email sent to " + request.email());
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok("Account verified successfully. You can now login.");
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestParam String email) {
+        authService.forgotPassword(email);
+        return ResponseEntity.ok("If email exists, a reset link has been sent.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
+        authService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.ok("Password reset successfully.");
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<String> resendVerification(@RequestParam String email) {
+        authService.resendVerification(email);
+        return ResponseEntity.ok("Verification link sent to " + email);
     }
 
     @PostMapping("/login")
