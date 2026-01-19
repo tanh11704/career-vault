@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .cmd-container {
+            background-color: #09090b;
+            color: #e4e4e7;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 40px;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid #3f3f46;
+        }
+        .header {
+            border-bottom: 1px dashed #8b5cf6; /* Tím */
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            color: #8b5cf6;
+        }
+        .content {
+            line-height: 1.6;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #7c3aed;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 24px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 1px solid #8b5cf6;
+        }
+        .btn:hover {
+            background-color: #6d28d9;
+        }
+        .footer {
+            margin-top: 30px;
+            border-top: 1px solid #27272a;
+            padding-top: 15px;
+            font-size: 10px;
+            color: #71717a;
+        }
+        .code-block {
+            background-color: #18181b;
+            padding: 10px;
+            border-left: 3px solid #22c55e; /* Xanh lá */
+            margin: 15px 0;
+            color: #22c55e;
+        }
+    </style>
+</head>
+<body style="background-color: #000000; padding: 20px;">
+<div class="cmd-container">
+    <div class="header">
+        &gt; SYSTEM_MESSAGE_INCOMING...<br>
+        &gt; PROTOCOL: AUTH_VERIFICATION
+    </div>
+
+    <div class="content">
+        <p>Target User: <span style="color: #ffffff;">{{fullName}}</span></p>
+        <p>Status: <span style="color: #f59e0b;">UNVERIFIED</span></p>
+        <br>
+        <p>System has detected a new registration request associated with this comms channel. To activate your access privileges to <strong>CareerVault</strong>, execution of the verification script is required.</p>
+
+        <div class="code-block">
+            // EXECUTE COMMAND:<br>
+            verify_user --token={{token}}
+        </div>
+
+        <center>
+            <a href="{{verificationLink}}" class="btn">[ INITIATE_VERIFICATION ]</a>
+        </center>
+
+        <p style="font-size: 12px; color: #a1a1aa;">
+            &gt; If you did not initialize this request, please terminate this message immediately.<br>
+            &gt; This link will self-destruct in 24 hours.
+        </p>
+    </div>
+
+    <div class="footer">
+        ------------------------------------------------<br>
+        CAREER_VAULT SYSTEM v2.4.0<br>
+        Encrypted Transmission (TLS 1.3)<br>
+        Timestamp: {{timestamp}}
+    </div>
+</div>
+</body>
+</html>
