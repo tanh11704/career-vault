@@ -17,6 +17,18 @@ spring:
   flyway:
     enabled: false
 
+  mail:
+    host: localhost
+    port: 1025
+    username: test
+    password: test
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
 application:
   mail:
     username: tuanpham.5417@gmail.com
