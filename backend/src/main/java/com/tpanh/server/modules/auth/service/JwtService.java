@@ -17,6 +17,8 @@ public interface JwtService {
 
     String generateToken(Map<String, Object> extraClaims, UserDetails userDetails);
 
+    String generateRefreshToken(UserDetails userDetails);
+
     String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration);
 
     boolean isTokenValid(String token, UserDetails userDetails);

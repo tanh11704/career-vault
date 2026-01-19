@@ -1,0 +1,22 @@
+package com.tpanh.server.modules.auth.service;
+
+import com.tpanh.server.modules.auth.dto.AuthResponse;
+import com.tpanh.server.modules.auth.dto.LoginRequest;
+import com.tpanh.server.modules.auth.dto.RegisterRequest;
+import com.tpanh.server.modules.auth.entity.RefreshToken;
+import com.tpanh.server.modules.auth.entity.User;
+
+public interface AuthService {
+
+    AuthResponse register(RegisterRequest request);
+
+    AuthResponse login(LoginRequest request);
+
+    AuthResponse refreshToken(String requestRefreshToken);
+
+    String generateAndSaveRefreshToken(User user);
+
+    void revokeAllUserTokens(User user);
+
+    void revokeRefreshToken(RefreshToken token);
+}

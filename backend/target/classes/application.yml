@@ -40,9 +40,11 @@ spring:
 #      write-dates-as-timestamps: false
 
 application:
+  api:
+    prefix: /api/v1
   security:
     jwt:
-      secret-key: "CHANGE_ME_TO_A_VERY_LONG_SECRET_KEY_AT_LEAST_64_CHARS_FOR_HS512"
+      secret-key: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
       expiration: 86400000      # 1 ngày (ms)
       refresh-token:
         expiration: 604800000
