@@ -1,10 +1,7 @@
 package com.tpanh.server.modules.auth.controller;
 
 import com.tpanh.server.common.exception.BusinessLogicException;
-import com.tpanh.server.modules.auth.dto.AuthResponse;
-import com.tpanh.server.modules.auth.dto.LoginRequest;
-import com.tpanh.server.modules.auth.dto.RegisterRequest;
-import com.tpanh.server.modules.auth.dto.ResetPasswordRequest;
+import com.tpanh.server.modules.auth.dto.*;
 import com.tpanh.server.modules.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -12,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
 
 @RestController
 @RequestMapping("${application.api.prefix}/auth")
@@ -53,6 +52,21 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/login/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(@RequestBody @Valid GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.loginWithGoogle(request));
+    }
+
+    @PostMapping("/create-password")
+    public ResponseEntity<String> createPassword(
+            @RequestBody @Valid CreatePasswordRequest request,
+            Principal principal // Lấy user hiện tại từ Token
+    ) {
+        authService.createPassword(principal.getName(), request.newPassword());
+
+        return ResponseEntity.ok("Password created successfully. You can now login with email/password.");
     }
 
     @PostMapping("/refresh-token")

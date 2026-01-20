@@ -6,6 +6,8 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -30,7 +32,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false, length = 500)
+    @Column(name = "password_hash", length = 500)
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false)
@@ -51,6 +53,9 @@ public class User {
     @Column(name = "is_email_verified")
     @Builder.Default
     private boolean isEmailVerified = false;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SocialAccount> socialAccounts = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

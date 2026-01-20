@@ -1,17 +1,26 @@
 package com.tpanh.server.modules.auth.service.impl;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.tpanh.server.common.exception.BusinessLogicException;
 import com.tpanh.server.common.exception.ResourceNotFoundException;
 import com.tpanh.server.common.service.EmailService;
 import com.tpanh.server.modules.auth.dto.AuthResponse;
+import com.tpanh.server.modules.auth.dto.GoogleLoginRequest;
 import com.tpanh.server.modules.auth.dto.LoginRequest;
 import com.tpanh.server.modules.auth.dto.RegisterRequest;
 import com.tpanh.server.modules.auth.entity.RefreshToken;
+import com.tpanh.server.modules.auth.entity.SocialAccount;
 import com.tpanh.server.modules.auth.entity.User;
 import com.tpanh.server.modules.auth.entity.VerificationCode;
+import com.tpanh.server.modules.auth.enums.AuthProvider;
+import com.tpanh.server.modules.auth.enums.Role;
 import com.tpanh.server.modules.auth.enums.TokenType;
 import com.tpanh.server.modules.auth.mapper.AuthMapper;
 import com.tpanh.server.modules.auth.repository.RefreshTokenRepository;
+import com.tpanh.server.modules.auth.repository.SocialAccountRepository;
 import com.tpanh.server.modules.auth.repository.UserRepository;
 import com.tpanh.server.modules.auth.repository.VerificationCodeRepository;
 import com.tpanh.server.modules.auth.security.CustomUserDetails;
@@ -26,9 +35,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -38,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final VerificationCodeRepository verificationCodeRepository;
+    private final SocialAccountRepository socialAccountRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -49,6 +63,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${application.api.base-url}")
     private String baseUrl;
+
+    @Value("${application.security.google.client-id}")
+    private String googleClientId;
 
     @Override
     @Transactional
@@ -102,6 +119,16 @@ public class AuthServiceImpl implements AuthService {
     public void forgotPassword(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessLogicException("User not found")); // Có thể fake return để tránh lộ email
+
+        if (user.getPasswordHash() == null) {
+            // User này thuần Social -> Gửi mail nhắc nhở thay vì OTP
+            emailService.sendHtmlEmail(user.getEmail(),
+                    "[CareerVault] Thông báo đăng nhập",
+                    "email/social-login-notice", // Template mới
+                    Map.of("fullName", user.getFullName())
+            );
+            return; // Dừng tại đây
+        }
 
         // Xóa code cũ nếu có
         verificationCodeRepository.findByUserIdAndType(user.getId(), TokenType.RESET_PASSWORD)
@@ -194,6 +221,36 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        // 1. Verify ID Token với Google (như code cũ)
+        GoogleIdToken.Payload payload = verifyGoogleToken(request.idToken()); // Hàm verify tách riêng cho gọn
+
+        String providerId = payload.getSubject(); // ID định danh của Google
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+        String pictureUrl = (String) payload.get("picture");
+
+        // 2. Gọi hàm xử lý chung (Helper)
+        return processSocialLogin(providerId, email, name, pictureUrl, AuthProvider.GOOGLE);
+    }
+
+    @Override
+    @Transactional
+    public void createPassword(String email, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new BusinessLogicException("User not found"));
+
+        // Bảo mật: Nếu user đã có password rồi thì KHÔNG ĐƯỢC dùng API này
+        if (user.getPasswordHash() != null) {
+            throw new BusinessLogicException("User already has a password. Please use 'Change Password' feature.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
     public AuthResponse refreshToken(String requestRefreshToken) {
         // 1. Tìm token trong DB
         var storedToken = refreshTokenRepository.findByToken(requestRefreshToken)
@@ -267,5 +324,95 @@ public class AuthServiceImpl implements AuthService {
         SecureRandom random = new SecureRandom();
         int code = 100000 + random.nextInt(900000);
         return String.valueOf(code);
+    }
+
+    // Hàm xử lý chung cho Social Login
+    private AuthResponse processSocialLogin(String providerId, String email, String name, String avatarUrl, AuthProvider provider) {
+
+        // 1. Check xem Social Account này đã tồn tại chưa
+        Optional<SocialAccount> socialAccountOpt = socialAccountRepository.findByProviderAndProviderId(provider, providerId);
+
+        User user;
+        if (socialAccountOpt.isPresent()) {
+            // Case A: Đã từng login bằng tài khoản Social này -> Lấy User ra
+            user = socialAccountOpt.get().getUser();
+            updateSocialInfo(socialAccountOpt.get(), email, name);
+        } else {
+            // Case B: Chưa từng login Social này -> Check xem email có tồn tại trong hệ thống chưa
+            Optional<User> existingUserOpt = userRepository.findByEmail(email);
+
+            if (existingUserOpt.isPresent()) {
+                // Case B1: Email đã tồn tại (User Local hoặc Google cũ) -> LINK TÀI KHOẢN
+                user = existingUserOpt.get();
+            } else {
+                // Case B2: User hoàn toàn mới -> TẠO USER MỚI
+                user = User.builder()
+                        .email(email)
+                        .fullName(name)
+                        .avatarUrl(avatarUrl)
+                        .role(Role.USER)
+                        .isActive(true)
+                        .isEmailVerified(true) // Social auto verified
+                        .passwordHash(null)
+                        .build();
+                user = userRepository.save(user);
+            }
+
+            // Tạo liên kết Social Account mới
+            SocialAccount newSocialAccount = SocialAccount.builder()
+                    .user(user)
+                    .provider(provider)
+                    .providerId(providerId)
+                    .email(email)
+                    .name(name)
+                    .build();
+            socialAccountRepository.save(newSocialAccount);
+        }
+
+        // Tạo Token trả về
+        revokeAllUserTokens(user);
+        var jwtToken = jwtService.generateToken(new CustomUserDetails(user));
+        var refreshToken = generateAndSaveRefreshToken(user);
+        return authMapper.toAuthResponse(user, jwtToken, refreshToken);
+    }
+
+    private void updateSocialInfo(SocialAccount socialAccount, String email, String name) {
+        // Logic update nếu cần
+        if (email != null) socialAccount.setEmail(email);
+        if (name != null) socialAccount.setName(name);
+        socialAccountRepository.save(socialAccount);
+    }
+
+    private GoogleIdToken.Payload verifyGoogleToken(String idTokenString) {
+        try {
+            // Tạo đối tượng Verifier
+            // NetHttpTransport: Dùng để gọi API check key của Google
+            // GsonFactory: Dùng để parse JSON response
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(),
+                    new GsonFactory()
+            )
+                    // Chỉ chấp nhận Token được cấp cho Client ID của mình
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            // Thực hiện verify
+            GoogleIdToken idToken = verifier.verify(idTokenString);
+
+            if (idToken != null) {
+                // Token hợp lệ -> Trả về Payload chứa info (email, name, avatar...)
+                return idToken.getPayload();
+            } else {
+                // Token không hợp lệ (hết hạn, sai chữ ký...)
+                throw new BusinessLogicException("Invalid Google ID Token.");
+            }
+
+        } catch (GeneralSecurityException | IOException e) {
+            // Lỗi kỹ thuật hoặc lỗi bảo mật khi verify
+            throw new BusinessLogicException("Google Authentication Failed: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            // Lỗi format token bị sai
+            throw new BusinessLogicException("Malformed Google Token.");
+        }
     }
 }

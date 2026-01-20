@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Login Notice</title>
+    <style>
+        /* Base styles từ Template V2 */
+        body { margin: 0; padding: 0; background-color: #000000; font-family: 'Courier New', Courier, monospace; color: #e4e4e7; }
+        .wrapper { width: 100%; background-color: #000000; padding-bottom: 40px; }
+
+        .cmd-container {
+            background-color: #09090b;
+            margin: 0 auto;
+            max-width: 600px;
+            border: 1px solid #3b82f6; /* Màu xanh dương cho Info */
+            border-top: 4px solid #3b82f6;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+        }
+
+        .header-logo { text-align: center; padding: 30px 20px 10px 20px; border-bottom: 1px dashed #27272a; }
+        .content { padding: 30px; }
+        .human-msg { font-size: 16px; line-height: 1.6; margin-bottom: 25px; color: #d4d4d8; }
+
+        /* Data Block - Style Info */
+        .data-block {
+            background-color: #18181b;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6; /* Blue border */
+            margin-bottom: 30px;
+        }
+        .label { color: #71717a; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
+        .value { color: #ffffff; font-weight: bold; }
+
+        .btn {
+            background-color: #2563eb; /* Blue Btn */
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #3b82f6;
+            display: inline-block;
+        }
+        .btn:hover { background-color: #1d4ed8; }
+
+        .footer { background-color: #0c0c0e; padding: 20px; text-align: center; font-size: 11px; color: #52525b; border-top: 1px solid #27272a; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="cmd-container">
+        <div class="header-logo">
+            <h2 style="margin: 0; color: #ffffff; letter-spacing: 2px;">CAREER<span style="color: #3b82f6;">VAULT</span></h2>
+            <div style="font-size: 10px; color: #3b82f6; margin-top: 5px;">:: SYSTEM NOTICE :: LOGIN METHOD ::</div>
+        </div>
+
+        <div class="content">
+            <div class="human-msg">
+                Hello <span style="font-weight: bold;" th:text="${fullName}">User</span> 👋,<br><br>
+                We received a request to reset the password for your account. However, our system indicates that your account was created using a <strong>Social Login</strong> method (Google, GitHub, etc.).
+            </div>
+
+            <div class="data-block">
+                <div>
+                    <span class="label">ACCOUNT TYPE</span><br>
+                    <span class="value" style="color: #3b82f6;">SOCIAL_LINKED_ACCOUNT</span>
+                </div>
+                <div style="margin-top: 15px;">
+                    <span class="label">ACTION REQUIRED</span><br>
+                    <span>No password reset is needed. Please allow access using your social provider.</span>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="http://localhost:3000/login" class="btn">
+                    [ RETURN_TO_LOGIN ]
+                </a>
+            </div>
+
+            <div class="human-msg" style="font-size: 13px; color: #71717a; border-top: 1px dashed #3f3f46; padding-top: 15px;">
+                &gt; Tip: If you want to use a password, please login via Social first, then go to Settings > Create Password.
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>CareerVault Support Team</strong></p>
+            <p>&copy; 2026 CareerVault. All systems operational.</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
